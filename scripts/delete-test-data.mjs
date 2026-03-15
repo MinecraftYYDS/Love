@@ -21,10 +21,12 @@ envContent.split('\n').forEach(line => {
 });
 
 const supabaseUrl = env['NEXT_PUBLIC_SUPABASE_URL'];
-const supabaseKey = env['NEXT_PUBLIC_SUPABASE_ANON_KEY'];
+const supabaseKey = env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] || env['NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'];
 
 if (!supabaseUrl || !supabaseKey) {
     console.error('❌ Missing Supabase credentials in .env.local');
+    console.error('   Required: NEXT_PUBLIC_SUPABASE_URL');
+    console.error('   And one of: NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
     process.exit(1);
 }
 

@@ -97,6 +97,7 @@ pnpm install
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# 或使用新版命名：NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 NEXT_PUBLIC_SETTINGS_PASSWORD=your_admin_password
 NEXT_PUBLIC_SITE_TITLE=贴贴记录
 ```

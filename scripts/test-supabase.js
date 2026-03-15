@@ -4,7 +4,7 @@ const path = require('path');
 
 // Try to read .env.local
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-let supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+let supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
     try {
@@ -19,6 +19,9 @@ if (!supabaseUrl || !supabaseKey) {
                 if (line.startsWith('NEXT_PUBLIC_SUPABASE_ANON_KEY=')) {
                     supabaseKey = line.split('=')[1].replace(/"/g, '').trim();
                 }
+                if (line.startsWith('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=')) {
+                    supabaseKey = line.split('=')[1].replace(/"/g, '').trim();
+                }
             }
         }
     } catch (e) {
@@ -26,9 +29,12 @@ if (!supabaseUrl || !supabaseKey) {
     }
 }
 
-// Fallback to the values provided in the prompt if not found (for testing purposes)
-if (!supabaseUrl) supabaseUrl = "https://iyubfezyiqyrbgpythxf.supabase.co";
-if (!supabaseKey) supabaseKey = "sb_publishable_ePPSML6Xuy5D1XpvCBjTrA_oh9raSq5"; // Note: This key looks suspicious, usually it's a JWT (starts with ey...)
+if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Missing Supabase credentials.');
+    console.error('   Required: NEXT_PUBLIC_SUPABASE_URL');
+    console.error('   And one of: NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
+    process.exit(1);
+}
 
 console.log('Testing Supabase Connection...');
 console.log('URL:', supabaseUrl);

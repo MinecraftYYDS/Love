@@ -2,23 +2,44 @@ import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 
-// Read .env.local manually since we don't have dotenv installed
-const envPath = path.resolve(process.cwd(), '.env.local');
-const envContent = fs.readFileSync(envPath, 'utf-8');
-
-const env = {};
-envContent.split('\n').forEach(line => {
-    const match = line.match(/^([^=]+)=(.*)$/);
-    if (match) {
-        env[match[1]] = match[2].trim();
+function loadEnvFile(fileName) {
+    const envPath = path.resolve(process.cwd(), fileName);
+    if (!fs.existsSync(envPath)) {
+        return;
     }
-});
 
-const supabaseUrl = env['NEXT_PUBLIC_SUPABASE_URL'];
-const supabaseKey = env['NEXT_PUBLIC_SUPABASE_ANON_KEY'];
+    const envContent = fs.readFileSync(envPath, 'utf-8');
+    envContent.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) {
+            return;
+        }
+
+        const match = trimmed.match(/^([^=]+)=(.*)$/);
+        if (!match) {
+            return;
+        }
+
+        const key = match[1].trim();
+        const value = match[2].trim().replace(/^"|"$/g, '');
+        if (!process.env[key]) {
+            process.env[key] = value;
+        }
+    });
+}
+
+loadEnvFile('.env.local');
+loadEnvFile('.env');
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-    console.error('❌ Missing Supabase credentials in .env.local');
+    console.error('❌ Missing Supabase credentials.');
+    console.error('   Required: NEXT_PUBLIC_SUPABASE_URL');
+    console.error('   And one of: NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
     process.exit(1);
 }
 
