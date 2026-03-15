@@ -78,10 +78,15 @@ export default function Achievements({ settings, currentUser }: AchievementsProp
     const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
     const [newIcon, setNewIcon] = useState("🏆");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAvailable, setIsAvailable] = useState(true);
 
     useEffect(() => {
         fetchAchievements();
-        
+
+        if (!isAvailable) {
+            return;
+        }
+
         const channel = supabase
             .channel('achievements')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'achievements' }, () => {
@@ -92,18 +97,30 @@ export default function Achievements({ settings, currentUser }: AchievementsProp
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [isAvailable]);
 
     const fetchAchievements = async () => {
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('achievements')
             .select('*')
             .order('date', { ascending: false });
-        
+
+        if (error) {
+            setAchievements([]);
+            setIsAvailable(false);
+            return;
+        }
+
+        setIsAvailable(true);
         if (data) setAchievements(data);
     };
 
     const handleAdd = async () => {
+        if (!isAvailable) {
+            alert("成就功能尚未初始化，请先执行数据库 SQL 脚本。");
+            return;
+        }
+
         if (!newTitle.trim() || !newDate) return;
         
         setIsSubmitting(true);
@@ -132,6 +149,10 @@ export default function Achievements({ settings, currentUser }: AchievementsProp
     };
 
     const handleDelete = async (id: string) => {
+        if (!isAvailable) {
+            return;
+        }
+
         if (!confirm("确定要删除这个成就吗？")) return;
         
         // Optimistic update
@@ -222,8 +243,8 @@ export default function Achievements({ settings, currentUser }: AchievementsProp
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto p-2 custom-scrollbar">
                 {achievements.length === 0 ? (
                     <div className="col-span-full text-center opacity-60 py-8">
-                        <p>还没有记录成就</p>
-                        <p className="text-sm mt-2">点击右上角添加你们的第一次吧！</p>
+                        <p>{isAvailable ? "还没有记录成就" : "成就功能尚未初始化"}</p>
+                        <p className="text-sm mt-2">{isAvailable ? "点击右上角添加你们的第一次吧！" : "执行 sql/07_create_achievements_table.sql 后即可使用"}</p>
                     </div>
                 ) : (
                     achievements.map((item) => (

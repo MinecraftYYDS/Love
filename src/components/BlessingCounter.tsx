@@ -42,6 +42,7 @@ export default function BlessingCounter({ currentUser }: BlessingCounterProps) {
     const [count, setCount] = useState<number>(0);
     const [animating, setAnimating] = useState(false);
     const [hasBlessed, setHasBlessed] = useState(false);
+    const [blessingMode, setBlessingMode] = useState<"stats" | "legacy" | "unavailable">("stats");
     
     // Danmaku state
     const [danmakuMessages, setDanmakuMessages] = useState<PublicMessage[]>([]);
@@ -75,15 +76,29 @@ export default function BlessingCounter({ currentUser }: BlessingCounterProps) {
     useEffect(() => {
         // Fetch initial count
         const fetchCount = async () => {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('blessing_stats')
                 .select('count')
                 .eq('id', 1)
-                .single();
-            
-            if (data) {
+                .maybeSingle();
+
+            if (!error && data) {
                 setCount(data.count);
+                setBlessingMode("stats");
+                return;
             }
+
+            const { count: legacyCount, error: legacyError } = await supabase
+                .from('blessings')
+                .select('*', { count: 'exact', head: true });
+
+            if (!legacyError) {
+                setCount(legacyCount ?? 0);
+                setBlessingMode("legacy");
+                return;
+            }
+
+            setBlessingMode("unavailable");
         };
 
         fetchCount();
@@ -107,18 +122,27 @@ export default function BlessingCounter({ currentUser }: BlessingCounterProps) {
         fetchMessages();
 
         // Subscribe to changes
-        const channel = supabase
-            .channel('blessings_and_messages')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'blessing_stats' }, (payload) => {
+        const channel = supabase.channel('blessings_and_messages');
+
+        if (blessingMode === "stats") {
+            channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'blessing_stats' }, (payload) => {
                 setCount(payload.new.count);
-            })
+            });
+        }
+
+        if (blessingMode === "legacy") {
+            channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'blessings' }, () => {
+                setCount(prev => prev + 1);
+            });
+        }
+
+        channel
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'public_messages' }, (payload) => {
                 const newMsg = payload.new as PublicMessage;
                 setDanmakuMessages(prev => {
                     if (prev.some(msg => msg.id === newMsg.id)) return prev;
                     return [newMsg, ...prev];
                 });
-                // Add to visible danmaku to show animation
                 setVisibleDanmaku(prev => {
                     if (prev.some(msg => msg.id === newMsg.id)) return prev;
                     const track = getSafeTrack(prev);
@@ -135,7 +159,7 @@ export default function BlessingCounter({ currentUser }: BlessingCounterProps) {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [blessingMode]);
 
     // Cycle through danmaku messages
     useEffect(() => {
@@ -166,6 +190,11 @@ export default function BlessingCounter({ currentUser }: BlessingCounterProps) {
     }, [danmakuMessages]);
 
     const handleBless = async () => {
+        if (blessingMode === "unavailable") {
+            alert('祝福功能尚未初始化，请先执行数据库 SQL 脚本。');
+            return;
+        }
+
         setAnimating(true);
         setTimeout(() => setAnimating(false), 500);
 
@@ -174,7 +203,9 @@ export default function BlessingCounter({ currentUser }: BlessingCounterProps) {
         setHasBlessed(true);
 
         try {
-            const { error } = await supabase.rpc('increment_blessing');
+            const { error } = blessingMode === "stats"
+                ? await supabase.rpc('increment_blessing')
+                : await supabase.from('blessings').insert([{}]);
 
             if (error) throw error;
         } catch (err) {

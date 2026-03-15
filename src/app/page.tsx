@@ -66,10 +66,10 @@ export default function Home() {
 
   useEffect(() => {
     const checkAuth = () => {
-        const user = getCookie("love_user");
-        if (user === "name1" || user === "name2") {
-            setCurrentUser(user);
-        }
+            const user = getCookie("love_user");
+            if (user === "name1" || user === "name2") {
+                setCurrentUser(user);
+            }
     };
     checkAuth();
 
@@ -77,29 +77,37 @@ export default function Home() {
       const { data, error } = await supabase
         .from('settings')
         .select('*')
-        .single();
-      
-      if (!data) {
+                .order('id', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+            if (error) {
+                console.error('Error fetching settings:', error);
+                setLoading(false);
         return;
       }
-      setSettings({
-          id: data.id,
-          name1: data.name1,
-          avatar1: data.avatar1,
-          password1: data.password1_hash, // Mapping from DB column
-          name2: data.name2,
-          avatar2: data.avatar2,
-          password2: data.password2_hash, // Mapping from DB column
-          startDate: data.start_date,
-          adminPassword: data.admin_password || process.env.NEXT_PUBLIC_SETTINGS_PASSWORD || "admin123",
-          showCountdown: data.show_countdown ?? true,
-          showBlessing: data.show_blessing ?? true,
-          showMessageBoard: data.show_message_board ?? true,
-          showPhotoWall: data.show_photo_wall ?? true,
-          showMusicPlayer: data.show_music_player ?? true,
-          showMap: data.show_map ?? true,
-          showAchievements: data.show_milestones ?? true,
-      });
+
+            if (data) {
+                setSettings({
+                    id: data.id,
+                    name1: data.name1,
+                    avatar1: data.avatar1,
+                    password1: data.password1_hash,
+                    name2: data.name2,
+                    avatar2: data.avatar2,
+                    password2: data.password2_hash,
+                    startDate: data.start_date,
+                    adminPassword: data.admin_password || process.env.NEXT_PUBLIC_SETTINGS_PASSWORD || "admin123",
+                    showCountdown: data.show_countdown ?? true,
+                    showBlessing: data.show_blessing ?? true,
+                    showMessageBoard: data.show_message_board ?? true,
+                    showPhotoWall: data.show_photo_wall ?? true,
+                    showMusicPlayer: data.show_music_player ?? true,
+                    showMap: data.show_map ?? true,
+                    showAchievements: data.show_milestones ?? true,
+                });
+            }
+
       setLoading(false);
     };
 
@@ -107,54 +115,73 @@ export default function Home() {
   }, []);
 
   const handleSettingsUpdate = async (newSettings: AppSettings) => {
-      setSettings(newSettings);
-      
-      if (newSettings.id) {
-          // Update existing row
-          await supabase.from('settings').update({
-              name1: newSettings.name1,
-              avatar1: newSettings.avatar1,
-              password1_hash: newSettings.password1,
-              name2: newSettings.name2,
-              avatar2: newSettings.avatar2,
-              password2_hash: newSettings.password2,
-              start_date: newSettings.startDate,
-              admin_password: newSettings.adminPassword,
-              show_countdown: newSettings.showCountdown,
-              show_blessing: newSettings.showBlessing,
-              show_message_board: newSettings.showMessageBoard,
-              show_photo_wall: newSettings.showPhotoWall,
-              show_music_player: newSettings.showMusicPlayer,
-              show_map: newSettings.showMap,
-              show_milestones: newSettings.showAchievements
-          }).eq('id', newSettings.id);
-      } else {
-          // Insert new row if no ID exists
-          const { data, error } = await supabase.from('settings').insert([{
-              name1: newSettings.name1,
-              avatar1: newSettings.avatar1,
-              password1_hash: newSettings.password1,
-              name2: newSettings.name2,
-              avatar2: newSettings.avatar2,
-              password2_hash: newSettings.password2,
-              start_date: newSettings.startDate,
-              admin_password: newSettings.adminPassword,
-              show_countdown: newSettings.showCountdown,
-              show_blessing: newSettings.showBlessing,
-              show_message_board: newSettings.showMessageBoard,
-              show_photo_wall: newSettings.showPhotoWall,
-              show_music_player: newSettings.showMusicPlayer,
-              show_map: newSettings.showMap,
-              show_milestones: newSettings.showAchievements
-          }]).select().single();
+        setSettings(newSettings);
 
-          if (error) {
-              console.error("Error creating settings:", error);
-          } else if (data) {
-              // Update local state with the new ID
-              setSettings(prev => ({ ...prev, id: data.id }));
-          }
-      }
+        let settingsId = newSettings.id;
+
+        if (!settingsId) {
+            const { data: existingSettings, error: existingSettingsError } = await supabase
+                .from('settings')
+                .select('id')
+                .order('id', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+            if (existingSettingsError) {
+                console.error('Error finding existing settings:', existingSettingsError);
+                return;
+            }
+
+            settingsId = existingSettings?.id;
+        }
+
+        if (settingsId) {
+            await supabase.from('settings').update({
+                name1: newSettings.name1,
+                avatar1: newSettings.avatar1,
+                password1_hash: newSettings.password1,
+                name2: newSettings.name2,
+                avatar2: newSettings.avatar2,
+                password2_hash: newSettings.password2,
+                start_date: newSettings.startDate,
+                admin_password: newSettings.adminPassword,
+                show_countdown: newSettings.showCountdown,
+                show_blessing: newSettings.showBlessing,
+                show_message_board: newSettings.showMessageBoard,
+                show_photo_wall: newSettings.showPhotoWall,
+                show_music_player: newSettings.showMusicPlayer,
+                show_map: newSettings.showMap,
+                show_milestones: newSettings.showAchievements
+            }).eq('id', settingsId);
+
+            if (!newSettings.id) {
+                setSettings(prev => ({ ...prev, id: settingsId }));
+            }
+        } else {
+            const { data, error } = await supabase.from('settings').insert([{
+                name1: newSettings.name1,
+                avatar1: newSettings.avatar1,
+                password1_hash: newSettings.password1,
+                name2: newSettings.name2,
+                avatar2: newSettings.avatar2,
+                password2_hash: newSettings.password2,
+                start_date: newSettings.startDate,
+                admin_password: newSettings.adminPassword,
+                show_countdown: newSettings.showCountdown,
+                show_blessing: newSettings.showBlessing,
+                show_message_board: newSettings.showMessageBoard,
+                show_photo_wall: newSettings.showPhotoWall,
+                show_music_player: newSettings.showMusicPlayer,
+                show_map: newSettings.showMap,
+                show_milestones: newSettings.showAchievements
+            }]).select().single();
+
+            if (error) {
+                console.error("Error creating settings:", error);
+            } else if (data) {
+                setSettings(prev => ({ ...prev, id: data.id }));
+            }
+        }
   };
 
   const handleUnlockSettings = () => {
