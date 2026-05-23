@@ -219,7 +219,8 @@ export default function PhotoWall({ settings, currentUser }: PhotoWallProps) {
             const uploadedUrls: string[] = [];
 
             for (const file of newImageFiles) {
-                const fileName = `${Date.now()}-${file.name}`;
+                const ext = file.name.split('.').pop() || 'jpg';
+                const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
                 const { data, error } = await supabase.storage
                     .from('photos')
                     .upload(fileName, file);
