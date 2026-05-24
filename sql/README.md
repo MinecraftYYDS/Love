@@ -61,7 +61,16 @@
 - 启用 Realtime 功能，监听 `UPDATE` 事件。
 - 删除旧的 `blessings` 表。
 
-### 8. `99_legacy_supabase_schema.sql` (旧版/备份)
+### 8. `08_additional_setup.sql` (补充修复)
+**用途**: 补齐 00-07 脚本遗漏的数据库与 Storage 配置。
+**包含内容**:
+- 为 `settings` 表补上 `show_milestones` 字段，避免成就墙写入失败。
+- 创建 `avatars` 存储桶，修复头像上传失败。
+- 重新创建 `photos` / `music` / `avatars` 的 Storage RLS 策略，并明确放行 `anon` 与 `authenticated` 角色。
+- 插入一条初始 `settings` 记录，避免首屏加载时因为 `.single()` 返回 406。
+- 触发 `PostgREST` schema reload，避免缓存不同步。
+
+### 9. `99_legacy_supabase_schema.sql` (旧版/备份)
 **用途**: 项目早期的 Schema 备份文件。
 **说明**: 包含了一些早期的表定义和默认数据插入语句。主要作为参考保留，建议使用 `00_schema_setup.sql` 进行初始化。
 
@@ -70,9 +79,22 @@
 1. 进入 [Supabase Dashboard](https://supabase.com/dashboard)。
 2. 选择你的项目，进入 **SQL Editor**。
 3. 依次复制上述 SQL 文件的内容并运行：
-   - 先运行 `00_schema_setup.sql` 创建表。
-   - 再运行 `01_storage_setup.sql` 创建存储桶。
-   - 如果遇到权限或找不到表的问题，运行 `02_fix_songs_table.sql`。
+    - 先运行 `00_schema_setup.sql` 创建表。
+    - 再运行 `01_storage_setup.sql` 创建存储桶。
+    - 如果遇到权限或找不到表的问题，运行 `02_fix_songs_table.sql`。
+    - 最后运行 `08_additional_setup.sql` 补齐遗漏配置。
+
+## 推荐执行顺序
+
+1. `00_schema_setup.sql`
+2. `01_storage_setup.sql`
+3. `02_fix_songs_table.sql`
+4. `03_visited_places_setup.sql`
+5. `04_add_module_toggles.sql`
+6. `05_public_messages.sql`
+7. `06_optimize_blessings.sql`
+8. `07_create_achievements_table.sql`
+9. `08_additional_setup.sql`
 
 ## 注意事项
 

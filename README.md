@@ -1,6 +1,6 @@
 # 贴贴记录
 
-一个采用孟菲斯设计风格 (Memphis Design) 的情侣互动记录页面。包含恋爱计时、照片墙、留言板和路人祝福功能。
+一个采用孟菲斯设计风格 (Memphis Design) 的情侣互动记录页面。包含恋爱计时、照片墙、留言板、音乐、足迹地图和路人祝福功能。
 
 🔗 **在线预览**: [https://love.qwq.my](https://love.qwq.my)
 
@@ -47,13 +47,29 @@
     -   当双方同时在线且聚焦页面时，显示 "👀 对方也在看" 提示。
     -   基于 Supabase Presence 实现。
 
+## 📦 部署前必做
+
+如果你要自己复刻并部署，这些数据库步骤一定要做完：
+
+1. 按顺序执行 `sql/00_schema_setup.sql` 到 `sql/07_create_achievements_table.sql`
+2. 继续执行 `sql/08_additional_setup.sql`
+3. 确认 Supabase Storage 中存在 `photos`、`music`、`avatars` 三个 bucket
+4. 确认 `settings` 表至少有一条记录，否则首页第一次加载会出现 406
+
+### 额外修复说明
+
+- `show_milestones` 是成就墙所需字段，`07_create_achievements_table.sql` 只建了表，没有补这个列
+- 头像上传使用 `avatars` bucket，必须单独创建
+- 照片上传文件名不能包含中文，否则 Supabase Storage 会报 `Invalid key`
+- `NEXT_PUBLIC_SETTINGS_PASSWORD` 只是首次默认值，数据库里的 `admin_password` 会优先生效
+
 ## 🛠 技术架构
 
 本项目基于现代前端技术栈构建，注重性能和开发体验。
 
 ### 核心技术栈
 
--   **框架**: [Next.js 15](https://nextjs.org/) (App Router)
+-   **框架**: [Next.js 16](https://nextjs.org/) (App Router)
 -   **语言**: [TypeScript](https://www.typescriptlang.org/)
 -   **UI 库**: [React 19](https://react.dev/)
 -   **样式**: [UnoCSS](https://unocss.dev/) (自定义 Memphis Preset)
@@ -101,7 +117,25 @@ NEXT_PUBLIC_SETTINGS_PASSWORD=your_admin_password
 NEXT_PUBLIC_SITE_TITLE=贴贴记录
 ```
 
-### 4. 启动开发服务器
+说明：`NEXT_PUBLIC_SETTINGS_PASSWORD` 只会在数据库 `settings.admin_password` 为空时作为兜底值使用。你后续如果改了设置面板里的管理员密码，要以数据库值为准。
+
+### 4. 初始化数据库
+
+进入 Supabase 控制台的 SQL Editor，按顺序执行：
+
+```text
+sql/00_schema_setup.sql
+sql/01_storage_setup.sql
+sql/02_fix_songs_table.sql
+sql/03_visited_places_setup.sql
+sql/04_add_module_toggles.sql
+sql/05_public_messages.sql
+sql/06_optimize_blessings.sql
+sql/07_create_achievements_table.sql
+sql/08_additional_setup.sql
+```
+
+### 5. 启动开发服务器
 
 ```bash
 pnpm dev
@@ -121,6 +155,29 @@ pnpm dev
     ```bash
     pnpm script:delete-test-data
     ```
+
+## 🐞 常见问题
+
+### 头像上传失败
+
+- 确认 Supabase Storage 存在 `avatars` bucket
+- 确认 `storage.objects` 上有 `avatars` 的 INSERT policy
+
+### 照片上传失败
+
+- 确认 `photos` bucket 存在
+- 确认 policy 里显式允许 `anon, authenticated` 上传
+- 如果文件名包含中文，先用新的上传逻辑或重命名文件
+
+### 页面出现 406
+
+- `settings` 表为空时，首次加载会触发 `.single()` 406
+- 执行 `sql/08_additional_setup.sql` 会自动补一条默认记录
+
+### 管理员密码改了没生效
+
+- 数据库里的 `settings.admin_password` 会优先于环境变量
+- 去 Supabase 里更新那一列，或者在设置面板里改
 
 ## 🎨 设计风格
 
