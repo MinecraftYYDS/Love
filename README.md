@@ -2,7 +2,7 @@
 
 一个采用孟菲斯设计风格 (Memphis Design) 的情侣互动记录页面。包含恋爱计时、照片墙、留言板、音乐、足迹地图和路人祝福功能。
 
-🔗 **在线预览**: [https://love.qwq.my](https://love.qwq.my)
+🔗 **在线预览**: [https://love.awacat.cc](https://love.awacat.cc)
 
 ## ✨ 功能特性
 
