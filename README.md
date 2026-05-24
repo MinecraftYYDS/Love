@@ -166,6 +166,140 @@ pnpm dev
     pnpm script:delete-test-data
     ```
 
+## Webhook 接收说明
+
+当数据库发生写入、修改或删除时，系统会向管理员设置里配置的 Webhook URL 发送 `POST` 请求。Webhook 适合做自动化同步、消息转发、日志归档、审查队列、统计报表等。
+
+### 请求方式
+
+- 方法: `POST`
+- Content-Type: `application/json`
+- 额外请求头: `X-Love-Source: love-app`
+- 如果设置了密钥，还会带上: `X-Love-Webhook-Secret: <管理员设置里的 Webhook Secret>`
+
+### 基本 Payload
+
+```json
+{
+  "source": "love-app",
+  "schema": "public",
+  "table": "messages",
+  "operation": "INSERT",
+  "record_id": "123",
+  "changed_fields": ["text", "date"],
+  "old_row": null,
+  "new_row": {
+    "id": 123,
+    "text": "今天也要开心",
+    "date": "2026-05-24T12:00:00.000Z",
+    "sender": "name1"
+  },
+  "occurred_at": "2026-05-24T12:00:00Z"
+}
+```
+
+### 字段说明
+
+- `source`: 固定为 `love-app`
+- `schema`: 数据库 schema，当前是 `public`
+- `table`: 触发来源表名
+- `operation`: 操作类型，可能是 `INSERT`、`UPDATE`、`DELETE`
+- `record_id`: 记录主键，统一以字符串形式发送
+- `changed_fields`: 本次变化的字段名数组
+- `old_row`: 更新前或删除前的数据，新增时为 `null`
+- `new_row`: 新增后或更新后的数据，删除时为 `null`
+- `occurred_at`: 触发时间，UTC ISO 格式
+
+### 会触发的表
+
+- `messages`: 情侣留言
+- `photos`: 照片墙
+- `songs`: 音乐列表
+- `public_messages`: 路人祝福弹幕
+- `visited_places`: 足迹地图
+- `achievements`: 成就墙
+- `blessing_stats`: `99 +1` 祝福计数
+
+### 接收端处理建议
+
+1. 先校验 `X-Love-Webhook-Secret`，不匹配直接返回 `401`。
+2. 再判断 `table` 和 `operation`，把不同业务表分流到不同处理器。
+3. `changed_fields` 适合做增量处理，`new_row` 适合做全量同步。
+4. Webhook 接口应尽快返回 `2xx`，耗时任务建议丢进队列异步处理。
+5. 如果处理失败，记录完整 payload，方便后续排查和手动重放。
+
+### Node.js/Express 示例
+
+```js
+import express from 'express';
+
+const app = express();
+app.use(express.json());
+
+app.post('/webhook/love', async (req, res) => {
+  const secret = req.header('X-Love-Webhook-Secret');
+  if (secret !== process.env.LOVE_WEBHOOK_SECRET) {
+    return res.status(401).json({ error: 'invalid secret' });
+  }
+
+  const { table, operation, new_row, old_row, changed_fields } = req.body;
+
+  if (table === 'messages' && operation === 'INSERT') {
+    console.log('new message:', new_row?.text);
+  }
+
+  if (table === 'photos' && operation === 'INSERT') {
+    console.log('new photos:', new_row?.image_urls);
+  }
+
+  if (table === 'blessing_stats' && operation === 'UPDATE') {
+    console.log('blessing count:', old_row?.count, '=>', new_row?.count);
+  }
+
+  return res.status(200).json({ ok: true });
+});
+
+app.listen(3000);
+```
+
+### Next.js Route Handler 示例
+
+```ts
+import { NextResponse } from 'next/server';
+
+export async function POST(req: Request) {
+  const secret = req.headers.get('X-Love-Webhook-Secret');
+  if (secret !== process.env.LOVE_WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'invalid secret' }, { status: 401 });
+  }
+
+  const payload = await req.json();
+
+  switch (payload.table) {
+    case 'messages':
+      console.log('message changed:', payload.operation, payload.new_row);
+      break;
+    case 'blessing_stats':
+      console.log('99 +1:', payload.old_row?.count, '=>', payload.new_row?.count);
+      break;
+    default:
+      console.log('other change:', payload.table, payload.operation);
+  }
+
+  return NextResponse.json({ ok: true });
+}
+```
+
+### 处理示例
+
+- `messages`: 转发到企业微信、Discord、邮件或自己的后台消息中心
+- `photos`: 同步到相册系统，或加入图片压缩/审核任务
+- `songs`: 同步歌单，刷新缓存
+- `public_messages`: 接入敏感词审查或运营日志
+- `visited_places`: 更新地图统计、旅行时间线
+- `achievements`: 同步成就时间线
+- `blessing_stats`: 记录每次 `99 +1` 的总数变化
+
 ## 🐞 常见问题
 
 ### 头像上传失败

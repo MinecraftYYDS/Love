@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, lazy, useTransition } from "react";
+import { useState, useEffect, lazy } from "react";
 import { AppSettings } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { setCookie, getCookie, eraseCookie } from "@/utils/cookie";
@@ -55,6 +55,7 @@ export default function Home() {
 
   // Presence state
   const [partnerOnline, setPartnerOnline] = useState(false);
+  const [isTestingNotification, setIsTestingNotification] = useState(false);
 
   useLockBodyScroll(isLoginOpen || isUnlockOpen);
 
@@ -213,6 +214,52 @@ export default function Home() {
   const handleLogout = () => {
       setCurrentUser(null);
       eraseCookie("love_user");
+  };
+
+  const handleTestTelegram = async (targetSettings: AppSettings) => {
+    setIsTestingNotification(true);
+    try {
+      const response = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'telegram',
+          telegramBotToken: targetSettings.notifyTelegramBotToken,
+          telegramChatId: targetSettings.notifyTelegramChatId,
+        }),
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+      alert('Telegram 测试消息已发送');
+    } catch (error) {
+      console.error('Telegram test failed:', error);
+      alert('Telegram 测试发送失败');
+    } finally {
+      setIsTestingNotification(false);
+    }
+  };
+
+  const handleTestWebhook = async (targetSettings: AppSettings) => {
+    setIsTestingNotification(true);
+    try {
+      const response = await fetch('/api/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'webhook',
+          webhookUrl: targetSettings.notifyWebhookUrl,
+          webhookSecret: targetSettings.notifyWebhookSecret,
+        }),
+      });
+
+      if (!response.ok) throw new Error(await response.text());
+      alert('Webhook 测试请求已发送');
+    } catch (error) {
+      console.error('Webhook test failed:', error);
+      alert('Webhook 测试发送失败');
+    } finally {
+      setIsTestingNotification(false);
+    }
   };
 
   useEffect(() => {
@@ -395,6 +442,9 @@ export default function Home() {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onSave={handleSettingsUpdate}
+        onTestTelegram={handleTestTelegram}
+        onTestWebhook={handleTestWebhook}
+        isTestingNotification={isTestingNotification}
       />
     </main>
   );

@@ -74,6 +74,8 @@ declare
     v_artist text;
     v_description text;
     v_count int;
+    v_old_count int;
+    v_new_count int;
     v_text text;
     v_name text;
     v_icon text;
@@ -125,6 +127,17 @@ begin
                 return format('✨ 祝福已更新 | %s', v_text);
             else
                 return format('✨ 祝福已删除 | %s', v_text);
+            end if;
+
+        when 'blessing_stats' then
+            v_old_count := nullif(p_old ->> 'count', '')::int;
+            v_new_count := nullif(p_new ->> 'count', '')::int;
+            if p_operation = 'UPDATE' and coalesce(v_new_count, 0) > coalesce(v_old_count, 0) then
+                return format('💖 99 +1 | 新增 %s 个祝福，当前共 %s 个', v_new_count - coalesce(v_old_count, 0), v_new_count);
+            elsif p_operation = 'INSERT' then
+                return format('💖 祝福计数已创建 | 当前共 %s 个', coalesce(v_new_count, 0));
+            else
+                return format('💖 祝福计数已更新 | 当前共 %s 个', coalesce(v_new_count, v_old_count, 0));
             end if;
 
         when 'visited_places' then
@@ -286,6 +299,11 @@ for each row execute function public.love_dispatch_change();
 drop trigger if exists love_notify_achievements on public.achievements;
 create trigger love_notify_achievements
 after insert or update or delete on public.achievements
+for each row execute function public.love_dispatch_change();
+
+drop trigger if exists love_notify_blessing_stats on public.blessing_stats;
+create trigger love_notify_blessing_stats
+after insert or update or delete on public.blessing_stats
 for each row execute function public.love_dispatch_change();
 
 -- 4. Reload PostgREST schema cache.

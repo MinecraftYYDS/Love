@@ -9,9 +9,12 @@ interface SettingsModalProps {
     onClose: () => void;
     settings: AppSettings;
     onSave: (newSettings: AppSettings) => void;
+    onTestTelegram: (settings: AppSettings) => void;
+    onTestWebhook: (settings: AppSettings) => void;
+    isTestingNotification: boolean;
 }
 
-export default function SettingsModal({ isOpen, onClose, settings, onSave }: SettingsModalProps) {
+export default function SettingsModal({ isOpen, onClose, settings, onSave, onTestTelegram, onTestWebhook, isTestingNotification }: SettingsModalProps) {
     const [formData, setFormData] = useState<AppSettings>(settings);
     const [avatar1File, setAvatar1File] = useState<File | null>(null);
     const [avatar2File, setAvatar2File] = useState<File | null>(null);
@@ -277,6 +280,15 @@ export default function SettingsModal({ isOpen, onClose, settings, onSave }: Set
                                 />
                             </div>
 
+                            <button
+                                type="button"
+                                onClick={() => onTestTelegram(formData)}
+                                disabled={isTestingNotification || !formData.notifyTelegramBotToken || !formData.notifyTelegramChatId}
+                                className="memphis-btn bg-memphis-cyan text-memphis-black w-full text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isTestingNotification ? "测试中..." : "测试 Telegram 发送"}
+                            </button>
+
                             <div>
                                 <label className="block text-sm font-bold mb-1">Webhook URL</label>
                                 <input
@@ -298,6 +310,15 @@ export default function SettingsModal({ isOpen, onClose, settings, onSave }: Set
                                     placeholder="可选，用于验签"
                                 />
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={() => onTestWebhook(formData)}
+                                disabled={isTestingNotification || !formData.notifyWebhookUrl}
+                                className="memphis-btn bg-memphis-yellow text-memphis-black w-full text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isTestingNotification ? "测试中..." : "测试 Webhook POST"}
+                            </button>
                         </div>
                     </div>
 

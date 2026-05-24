@@ -169,7 +169,7 @@ export default function BlessingCounter({ currentUser }: BlessingCounterProps) {
         setAnimating(true);
         setTimeout(() => setAnimating(false), 500);
 
-        // Optimistic update
+        // 99 +1 should immediately contribute to the visible counter.
         setCount(prev => prev + 1);
         setHasBlessed(true);
 
@@ -179,7 +179,6 @@ export default function BlessingCounter({ currentUser }: BlessingCounterProps) {
             if (error) throw error;
         } catch (err) {
             console.error('Error sending blessing:', err);
-            // Revert on error
             setCount(prev => prev - 1);
             setHasBlessed(false);
         }
