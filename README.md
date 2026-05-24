@@ -47,12 +47,18 @@
     -   当双方同时在线且聚焦页面时，显示 "👀 对方也在看" 提示。
     -   基于 Supabase Presence 实现。
 
+9.  **数据库变更通知 (Telegram / Webhook)**
+    -   在常用表发生新增、修改或删除后，自动推送通知。
+    -   Telegram 发送的是已整理好的直观消息，适合直接发到频道。
+    -   Webhook 发送尽量完整的原始数据，方便接收端自行处理。
+    -   可在管理员设置中单独配置 Telegram 和 Webhook，并支持“只发 Telegram / 只发 Webhook”。
+
 ## 📦 部署前必做
 
 如果你要自己复刻并部署，这些数据库步骤一定要做完：
 
-1. 按顺序执行 `sql/00_schema_setup.sql` 到 `sql/07_create_achievements_table.sql`
-2. 继续执行 `sql/08_additional_setup.sql`
+1. 按顺序执行 `sql/00_schema_setup.sql` 到 `sql/08_additional_setup.sql`
+2. 继续执行 `sql/09_notifications_setup.sql`
 3. 确认 Supabase Storage 中存在 `photos`、`music`、`avatars` 三个 bucket
 4. 确认 `settings` 表至少有一条记录，否则首页第一次加载会出现 406
 
@@ -62,6 +68,9 @@
 - 头像上传使用 `avatars` bucket，必须单独创建
 - 照片上传文件名不能包含中文，否则 Supabase Storage 会报 `Invalid key`
 - `NEXT_PUBLIC_SETTINGS_PASSWORD` 只是首次默认值，数据库里的 `admin_password` 会优先生效
+- Telegram 通知需要填写 `notify_telegram_bot_token` 和 `notify_telegram_chat_id`
+- Webhook 通知只需要填写 `notify_webhook_url`，`notify_webhook_secret` 可选
+- 如果同时勾选了“只发 Telegram”和“只发 Webhook”，界面会自动保留最新一个开关为准
 
 ## 🛠 技术架构
 
@@ -133,6 +142,7 @@ sql/05_public_messages.sql
 sql/06_optimize_blessings.sql
 sql/07_create_achievements_table.sql
 sql/08_additional_setup.sql
+sql/09_notifications_setup.sql
 ```
 
 ### 5. 启动开发服务器

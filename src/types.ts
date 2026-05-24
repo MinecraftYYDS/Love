@@ -8,6 +8,12 @@ export interface AppSettings {
     password2: string;
     startDate: string; // ISO date string YYYY-MM-DD
     adminPassword?: string;
+    notifyTelegramBotToken?: string;
+    notifyTelegramChatId?: string;
+    notifyWebhookUrl?: string;
+    notifyWebhookSecret?: string;
+    notifyOnlyTelegram?: boolean;
+    notifyOnlyWebhook?: boolean;
     
     // Module Toggles
     showCountdown?: boolean;

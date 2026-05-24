@@ -52,6 +52,9 @@ export default function SettingsModal({ isOpen, onClose, settings, onSave }: Set
     const handleSubmit = async () => {
         setUploading(true);
         try {
+            const notifyOnlyTelegram = !!formData.notifyOnlyTelegram && !formData.notifyOnlyWebhook;
+            const notifyOnlyWebhook = !!formData.notifyOnlyWebhook && !formData.notifyOnlyTelegram;
+
             let newAvatar1 = formData.avatar1;
             let newAvatar2 = formData.avatar2;
 
@@ -65,6 +68,8 @@ export default function SettingsModal({ isOpen, onClose, settings, onSave }: Set
 
             onSave({
                 ...formData,
+                notifyOnlyTelegram,
+                notifyOnlyWebhook,
                 avatar1: newAvatar1,
                 avatar2: newAvatar2
             });
@@ -215,6 +220,84 @@ export default function SettingsModal({ isOpen, onClose, settings, onSave }: Set
                                     <span className="text-sm font-bold">{label}</span>
                                 </label>
                             ))}
+                        </div>
+                    </div>
+
+                    <div className="border-b-2 border-memphis-black pb-4">
+                        <h3 className="font-bold mb-2 text-memphis-purple bg-white inline-block px-2 border-2 border-memphis-black shadow-[2px_2px_0_#232323]">通知 / Notifications</h3>
+                        <div className="space-y-3 mt-2">
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={!!formData.notifyOnlyTelegram}
+                                            onChange={(e) => setFormData({ ...formData, notifyOnlyTelegram: e.target.checked, notifyOnlyWebhook: e.target.checked ? false : formData.notifyOnlyWebhook })}
+                                        />
+                                        <div className="w-10 h-6 bg-gray-200 border-2 border-memphis-black rounded-full peer peer-checked:bg-memphis-green peer-focus:ring-2 peer-focus:ring-memphis-black transition-all"></div>
+                                        <div className="absolute left-[4px] top-[4px] bg-white border-2 border-memphis-black w-3 h-3 rounded-full transition-all peer-checked:translate-x-4"></div>
+                                    </div>
+                                    <span className="text-sm font-bold">只发 Telegram</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={!!formData.notifyOnlyWebhook}
+                                            onChange={(e) => setFormData({ ...formData, notifyOnlyWebhook: e.target.checked, notifyOnlyTelegram: e.target.checked ? false : formData.notifyOnlyTelegram })}
+                                        />
+                                        <div className="w-10 h-6 bg-gray-200 border-2 border-memphis-black rounded-full peer peer-checked:bg-memphis-green peer-focus:ring-2 peer-focus:ring-memphis-black transition-all"></div>
+                                        <div className="absolute left-[4px] top-[4px] bg-white border-2 border-memphis-black w-3 h-3 rounded-full transition-all peer-checked:translate-x-4"></div>
+                                    </div>
+                                    <span className="text-sm font-bold">只发 Webhook</span>
+                                </label>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold mb-1">Telegram Bot Token</label>
+                                <input
+                                    type="password"
+                                    className="memphis-input w-full"
+                                    value={formData.notifyTelegramBotToken || ""}
+                                    onChange={(e) => setFormData({ ...formData, notifyTelegramBotToken: e.target.value })}
+                                    placeholder="123456:ABC-DEF..."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold mb-1">Telegram Chat ID / 频道 ID</label>
+                                <input
+                                    type="text"
+                                    className="memphis-input w-full"
+                                    value={formData.notifyTelegramChatId || ""}
+                                    onChange={(e) => setFormData({ ...formData, notifyTelegramChatId: e.target.value })}
+                                    placeholder="-1001234567890"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold mb-1">Webhook URL</label>
+                                <input
+                                    type="url"
+                                    className="memphis-input w-full"
+                                    value={formData.notifyWebhookUrl || ""}
+                                    onChange={(e) => setFormData({ ...formData, notifyWebhookUrl: e.target.value })}
+                                    placeholder="https://example.com/webhook"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold mb-1">Webhook Secret</label>
+                                <input
+                                    type="password"
+                                    className="memphis-input w-full"
+                                    value={formData.notifyWebhookSecret || ""}
+                                    onChange={(e) => setFormData({ ...formData, notifyWebhookSecret: e.target.value })}
+                                    placeholder="可选，用于验签"
+                                />
+                            </div>
                         </div>
                     </div>
 
